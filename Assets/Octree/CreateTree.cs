@@ -6,14 +6,28 @@ using UnityEngine;
 public class CreateTree : MonoBehaviour
 {
     public int depth;
-    public NativeList<Node<Vector3>> nodes;
+    [Range(0f, 5f)]
+    public int drawDepth;
+    public NativeList<Node<OctreeData>> nodes;
 
     private void Start()
     {
-        nodes = new NativeList<Node<Vector3>>(0, Allocator.Persistent);
-        
+        nodes = new NativeList<Node<OctreeData>>(0, Allocator.Persistent);
 
+        BuildNodesToDepth(depth);
+    }
 
+    private void Update()
+    {
+        for (int i = 0; i < nodes.Length; i++)
+        {
+            if (nodes[i].GetDepth(nodes) == drawDepth)
+                DebugDrawSquare(nodes[i].data.position, nodes[i].data.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
+        }
+    }
+
+    private void BuildNodesToDepth(int depth)
+    {
         int nodeCount = 1;
 
         for (int currentDepth = 0; currentDepth < depth; currentDepth++)
@@ -24,11 +38,8 @@ public class CreateTree : MonoBehaviour
             }
         }
 
-        Debug.Log(nodeCount);
+        nodes.Add(Node<OctreeData>.CreateNewNode(new OctreeData() { position = Vector3.zero, radius = 64}, -1, 0));
 
-        NativeList<Node<Vector3>> newNodes = new NativeList<Node<Vector3>>(nodeCount, Allocator.Persistent);
-        nodes.Add(Node<Vector3>.CreateNewNode(new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)), -1, 0));
-        
         for (int i = 0; i < depth; i++)
         {
             int nodeLength = nodes.Length;
@@ -36,16 +47,64 @@ public class CreateTree : MonoBehaviour
             {
                 if (nodes[j].endNode)
                 {
-                    Node<Vector3> currentNode = nodes[j];
+                    Node<OctreeData> currentNode = nodes[j];
                     for (int k = 0; k < 8; k++)
                     {
-                        nodes.Add(currentNode.PopulateChild(k, new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), Random.Range(-1f, 1f)), nodes.Length));
+                        Vector3 offset = new Vector3(1, 1, 1);
+                        switch (k)
+                        {
+                            case (int)OctreeChild.RightTopBack:
+                                offset = new Vector3(1, 1, 1);
+                                break;
+                            case (int)OctreeChild.RightTopFront:
+                                offset = new Vector3(1, 1, -1);
+                                break;
+                            case (int)OctreeChild.RightBottomBack:
+                                offset = new Vector3(1, -1, 1);
+                                break;
+                            case (int)OctreeChild.RightBottomFront:
+                                offset = new Vector3(1, -1, -1);
+                                break;
+                            case (int)OctreeChild.LeftTopBack:
+                                offset = new Vector3(-1, 1, 1);
+                                break;
+                            case (int)OctreeChild.LeftTopFront:
+                                offset = new Vector3(-1, 1, -1);
+                                break;
+                            case (int)OctreeChild.LeftBottomBack:
+                                offset = new Vector3(-1, -1, 1);
+                                break;
+                            case (int)OctreeChild.LeftBottomFront:
+                                offset = new Vector3(-1, -1, -1);
+                                break;
+                        }
+                        nodes.Add(currentNode.PopulateChild(k, new OctreeData() {  position = currentNode.data.position + offset * currentNode.data.radius * .5f, radius = currentNode.data.radius * .5f}, nodes.Length));
                     }
                     nodes[j] = currentNode;
                 }
             }
         }
+    }
 
-        Debug.Log(nodes.Length);
+    public void DebugDrawSquare(Vector3 center, float radius, Color color, float time)
+    {
+        for (int i = 0; i < 8; i++)
+        {
+            //Face1
+            Debug.DrawLine(center + OctreeData.GetOffsetVector(0) * radius, center + OctreeData.GetOffsetVector(1) * radius, color, time);
+            Debug.DrawLine(center + OctreeData.GetOffsetVector(0) * radius, center + OctreeData.GetOffsetVector(2) * radius, color, time);
+            Debug.DrawLine(center + OctreeData.GetOffsetVector(3) * radius, center + OctreeData.GetOffsetVector(1) * radius, color, time);
+            Debug.DrawLine(center + OctreeData.GetOffsetVector(3) * radius, center + OctreeData.GetOffsetVector(2) * radius, color, time);
+            //Face2
+            Debug.DrawLine(center + OctreeData.GetOffsetVector(4) * radius, center + OctreeData.GetOffsetVector(5) * radius, color, time);
+            Debug.DrawLine(center + OctreeData.GetOffsetVector(4) * radius, center + OctreeData.GetOffsetVector(6) * radius, color, time);
+            Debug.DrawLine(center + OctreeData.GetOffsetVector(7) * radius, center + OctreeData.GetOffsetVector(5) * radius, color, time);
+            Debug.DrawLine(center + OctreeData.GetOffsetVector(7) * radius, center + OctreeData.GetOffsetVector(6) * radius, color, time);
+            //Connecting Arms
+            Debug.DrawLine(center + OctreeData.GetOffsetVector(0) * radius, center + OctreeData.GetOffsetVector(4) * radius, color, time);
+            Debug.DrawLine(center + OctreeData.GetOffsetVector(1) * radius, center + OctreeData.GetOffsetVector(5) * radius, color, time);
+            Debug.DrawLine(center + OctreeData.GetOffsetVector(2) * radius, center + OctreeData.GetOffsetVector(6) * radius, color, time);
+            Debug.DrawLine(center + OctreeData.GetOffsetVector(3) * radius, center + OctreeData.GetOffsetVector(7) * radius, color, time);
+        }
     }
 }

@@ -11,6 +11,18 @@ public struct Node<Data>
     public bool endNode;
     public NodeChildren nodeChildren;
 
+    public int GetDepth(NativeArray<Node<Data>> nodes)
+    {
+        int depth = 0;
+        if (parentNodeIndex == -1)
+            return depth;
+        else
+        {
+            depth++;
+            depth += nodes[parentNodeIndex].GetDepth(nodes);
+        }
+        return depth;
+    }
 
     public int GetMasterNodeIndex(NativeArray<Node<Data>> nodes)
     {
@@ -95,4 +107,55 @@ public struct NodeChildren
             default: return -1;
         }
     }
+}
+
+public struct OctreeData
+{
+    public Vector3 position;
+    public float radius;
+
+    public static Vector3 GetOffsetVector(int ChildIndex)
+    {
+        Vector3 offset = Vector3.zero;
+        switch (ChildIndex)
+        {
+            case (int)OctreeChild.RightTopBack:
+                offset = new Vector3(1, 1, 1);
+                break;
+            case (int)OctreeChild.RightTopFront:
+                offset = new Vector3(1, 1, -1);
+                break;
+            case (int)OctreeChild.RightBottomBack:
+                offset = new Vector3(1, -1, 1);
+                break;
+            case (int)OctreeChild.RightBottomFront:
+                offset = new Vector3(1, -1, -1);
+                break;
+            case (int)OctreeChild.LeftTopBack:
+                offset = new Vector3(-1, 1, 1);
+                break;
+            case (int)OctreeChild.LeftTopFront:
+                offset = new Vector3(-1, 1, -1);
+                break;
+            case (int)OctreeChild.LeftBottomBack:
+                offset = new Vector3(-1, -1, 1);
+                break;
+            case (int)OctreeChild.LeftBottomFront:
+                offset = new Vector3(-1, -1, -1);
+                break;
+        }
+        return offset;
+    }
+}
+
+public enum OctreeChild
+{
+    RightTopBack = 0,     //000
+    RightTopFront = 1,    //001
+    RightBottomBack = 2,  //010
+    RightBottomFront = 3, //011
+    LeftTopBack = 4,      //100
+    LeftTopFront = 5,     //101
+    LeftBottomBack = 6,   //110
+    LeftBottomFront = 7,  //111
 }
