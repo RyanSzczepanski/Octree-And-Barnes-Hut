@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Unity.Collections;
 using UnityEngine;
 
+[System.Serializable]
 public struct Node<Data>
 {
     public Data data;
@@ -65,6 +66,7 @@ public struct Node<Data>
     }
 }
 
+[System.Serializable]
 public struct NodeChildren
 {
     public int child0;
@@ -109,10 +111,14 @@ public struct NodeChildren
     }
 }
 
+[System.Serializable]
 public struct OctreeData
 {
-    public Vector3 position;
+    public Vector3 center;
     public float radius;
+
+    public bool hasPlanet;
+    public Vector3 objectPos;
 
     public static Vector3 GetOffsetVector(int ChildIndex)
     {
