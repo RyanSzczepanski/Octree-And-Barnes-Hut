@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
@@ -7,10 +8,14 @@ using UnityEngine;
 public struct Node<Data>
 {
     public Data data;
-    public int parentNodeIndex;
+
     public int index;
-    public bool endNode;
+    public int parentNodeIndex;
     public NodeChildren nodeChildren;
+
+    public bool endNode;
+
+    public SpacialOctreeData spacialData;
 
     public int GetDepth(NativeArray<Node<Data>> nodes)
     {
@@ -25,6 +30,27 @@ public struct Node<Data>
         return depth;
     }
 
+    public List<Data> GetAllData(NativeArray<Node<Data>> nodes)
+    {
+        List<Data> list = new List<Data>();
+        if (endNode)
+        {
+            list.Add(data);
+        }
+        else
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                if(nodeChildren.GetChildIndex(i) == -1)
+                {
+                    Debug.Log("BADDDDD");
+                }
+                list.AddRange(nodes[nodeChildren.GetChildIndex(i)].GetAllData(nodes));
+            }
+        }
+        return list;
+    }
+
     public int GetMasterNodeIndex(NativeArray<Node<Data>> nodes)
     {
         if(parentNodeIndex == -1)
@@ -34,13 +60,17 @@ public struct Node<Data>
         return -1;
     }
 
-    public static Node<Data> CreateNewNode(Data data, int parentNodeIndex, int index)
+    public static Node<Data> CreateNewNode(Data data, SpacialOctreeData spacialData, int parentNodeIndex, int index)
     {
         return new Node<Data>() {
             data = data,
-            parentNodeIndex = parentNodeIndex,
+
             index = index,
+            parentNodeIndex = parentNodeIndex,
             endNode = true,
+            
+            spacialData = spacialData,
+            
             nodeChildren = new NodeChildren() {
                 child0 = -1,
                 child1 = -1,
@@ -59,10 +89,16 @@ public struct Node<Data>
         endNode = false;
         if(nodeChildren.GetChildIndex(siblingIndex) != -1)
         {
-            Debug.Log($"Child {siblingIndex} of Node Index {index} is already populated");
+            Debug.Log($"Child {siblingIndex} of Node Index {index} is already populated with Node Index {nodeChildren.GetChildIndex(siblingIndex)}");
         }
         nodeChildren.SetChildIndex(siblingIndex, index);
-        return CreateNewNode(data, this.index, index);
+        return CreateNewNode(
+            data,
+            new SpacialOctreeData() {
+                center = this.spacialData.center + SpacialOctreeData.GetOffsetVector(siblingIndex) * spacialData.radius / 2,
+                radius = spacialData.radius / 2},
+            this.index,
+            index);
     }
 }
 
@@ -94,31 +130,27 @@ public struct NodeChildren
         }
     }
 
-    public int SetChildIndex(int child, int value)
+    public void SetChildIndex(int child, int value)
     {
         switch (child)
         {
-            case 0: return child0;
-            case 1: return child1;
-            case 2: return child2;
-            case 3: return child3;
-            case 4: return child4;
-            case 5: return child5;
-            case 6: return child6;
-            case 7: return child7;
-            default: return -1;
+            case 0: child0 = value; break;
+            case 1: child1 = value; break;
+            case 2: child2 = value; break;
+            case 3: child3 = value; break;
+            case 4: child4 = value; break;
+            case 5: child5 = value; break;
+            case 6: child6 = value; break;
+            case 7: child7 = value; break;
         }
     }
 }
 
 [System.Serializable]
-public struct OctreeData
+public struct SpacialOctreeData
 {
     public Vector3 center;
     public float radius;
-
-    public bool hasPlanet;
-    public Vector3 objectPos;
 
     public static Vector3 GetOffsetVector(int ChildIndex)
     {
@@ -152,6 +184,33 @@ public struct OctreeData
         }
         return offset;
     }
+
+    public int GetChildQuadIndex(Vector3 position)
+    {
+        Vector3 localPosition = position - center;
+        char[] binary = new char[3];
+        if (localPosition.x > 0)
+            binary[0] = '0';
+        else
+            binary[0] = '1';
+        if (localPosition.y > 0)
+            binary[1] = '0';
+        else
+            binary[1] = '1';
+        if (localPosition.z > 0)
+            binary[2] = '0';
+        else
+            binary[2] = '1';
+
+        return Convert.ToInt32(new string(binary), 2);
+    }
+}
+
+public struct NBodyOctreeData
+{
+    public bool hasPlanet;
+    public Vector3 centerOfMass;
+    public double mass;
 }
 
 public enum OctreeChild

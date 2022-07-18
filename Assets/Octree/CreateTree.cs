@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Jobs;
 using UnityEngine;
 
 public class CreateTree : MonoBehaviour
@@ -8,35 +9,69 @@ public class CreateTree : MonoBehaviour
     public int depth;
     [Range(-1f, 10f)]
     public int drawDepth;
-    public NativeList<Node<OctreeData>> nodes;
-    public Node<OctreeData>[] nodesDebug;
+    public NativeList<Node<NBodyOctreeData>> nodes;
+    public Node<NBodyOctreeData>[] nodesDebug;
+
+    //public List<NodeRef<NBodyOctreeData>> nodesRef;
+
+    public bool useRef;
+
+    public GameObject prefab;
 
     public Transform[] objects;
 
     private void Start()
     {
-        nodes = new NativeList<Node<OctreeData>>(0, Allocator.Persistent);
+        
+        objects = ObjectSpawner(5000, 63f, prefab);
 
-        nodes.Add(Node<OctreeData>.CreateNewNode(new OctreeData()
+        //Data
+        
+        nodes = new NativeList<Node<NBodyOctreeData>>(0, Allocator.Persistent);
+
+        nodes.Add(Node<NBodyOctreeData>.CreateNewNode(
+            new NBodyOctreeData(),
+            new SpacialOctreeData()
+            {
+                center = Vector3.zero,
+                radius = 64,
+            },
+            -1,
+            0));
+
+        NativeArray<Vector3> positions = new NativeArray<Vector3>(objects.Length, Allocator.TempJob);
+        for (int i = 0; i < objects.Length; i++)
         {
-            center = Vector3.zero,
-            radius = 64,
-            hasPlanet = false
-        }, -1, 0));
+            positions[i] = objects[i].position;
+        }
+        Timer.Start();
+        BarnesHut(positions);
+        Timer.Stop();
 
-        BarnesHut(objects);
-        nodesDebug = nodes.ToArray();
-        //BuildNodesToDepth(depth);
+        //Timer.Start();
+        //BarnesHutRework(positions);
+        //Timer.Stop();
+
+        //foreach (NBodyOctreeData data in nodes[0].GetAllData(nodes))
+        //{
+        //    //Debug.Log(data.centerOfMass);
+        //    //Debug.Log(data.mass);
+        //}
+
     }
 
     private void Update()
     {
-        for (int i = 0; i < nodes.Length; i++)
+        if (!useRef)
         {
-            if (drawDepth == -1)
-                DebugRenderer.DrawCube(nodes[i].data.center, nodes[i].data.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
-            else if (nodes[i].GetDepth(nodes) == drawDepth)
-                DebugRenderer.DrawCube(nodes[i].data.center, nodes[i].data.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
+            //Data Drawer
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                if (drawDepth == -1)
+                    DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
+                else if (nodes[i].GetDepth(nodes) == drawDepth)
+                    DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
+            }
         }
     }
 
@@ -53,11 +88,15 @@ public class CreateTree : MonoBehaviour
         }
 
         //Initial Node
-        nodes.Add(Node<OctreeData>.CreateNewNode(new OctreeData() {
-            center = Vector3.zero,
-            radius = 64,
-            hasPlanet = false
-        }, -1, 0));
+        nodes.Add(Node<NBodyOctreeData>.CreateNewNode(
+            new NBodyOctreeData(),
+            new SpacialOctreeData()
+            {
+                center = Vector3.zero,
+                radius = 64,
+            },
+            -1,
+            0));
 
         for (int i = 0; i < depth; i++)
         {
@@ -66,17 +105,13 @@ public class CreateTree : MonoBehaviour
             {
                 if (nodes[j].endNode)
                 {
-                    Node<OctreeData> currentNode = nodes[j];
+                    Node<NBodyOctreeData> currentNode = nodes[j];
                     for (int k = 0; k < 8; k++)
                     {
-                        Vector3 offset = OctreeData.GetOffsetVector(k);
+                        Vector3 offset = SpacialOctreeData.GetOffsetVector(k);
                         nodes.Add(currentNode.PopulateChild(
                             k,
-                            new OctreeData() {
-                                center = currentNode.data.center + offset * currentNode.data.radius * .5f,
-                                radius = currentNode.data.radius * .5f,
-                                hasPlanet = false
-                            },
+                            new NBodyOctreeData(),
                             nodes.Length));
                     }
                     nodes[j] = currentNode;
@@ -85,73 +120,147 @@ public class CreateTree : MonoBehaviour
         }
     }
 
-    private void BarnesHut(Transform[] objects)
+    void BarnesHut(NativeArray<Vector3> positions)
     {
-        List<Transform> transforms = new List<Transform>(objects);
-        //Loop all transforms needed to be sorted
-        for (int i = 0; i < transforms.Count; i++)
+        NativeArray<int> nativeArrray = new NativeArray<int>(1, Allocator.Temp);
+        nativeArrray[0] = 0;
+        for (int i = 0; i < positions.Length; i++)
         {
-            if (Recursive(transforms, i)) { transforms.RemoveAt(i); }
+            Recursive(positions, i, nativeArrray);
+        }
+        nativeArrray.Dispose();
+    }
+
+    void BarnesHutRework(NativeArray<Vector3> positions)
+    {
+        for (int i = 0; i < positions.Length; i++)
+        {
+            RecursiveRework(positions, i, 0);
         }
     }
 
+
+
+
     //TODO: Bruh clean this shit up, like for real you wrote this?
-    private bool Recursive(List<Transform> transforms, int i)
+    private bool Recursive(NativeArray<Vector3> positions, int i, NativeArray<int> searchNodeIndexes)
     {
         //This needs to be recursive and recalled after creating more nodes if none are valid
         //Loop all nodes looking for open node
-        for (int j = 0; j < nodes.Length; j++)
+        for (int j = 0; j < searchNodeIndexes.Length; j++)
         {
-            Node<OctreeData> currentNode = nodes[j];
+            Node<NBodyOctreeData> currentNode = nodes[searchNodeIndexes[j]];
             //If node contains transforms position
-            if (NodeContainsTransform(transforms[i].position, nodes[j]))
+            if (NodeContainsTransform(positions[i], currentNode))
             {
-                //If node already has a planet continue
-                if (nodes[j].data.hasPlanet == true || !nodes[j].endNode) { continue; }
+                //If node isnt and end node skip to children
+                if (!currentNode.endNode) { continue; }
                 //Loop all transforms to check for other transforms in same area
-                for (int k = 0; k < transforms.Count; k++)
+                for (int k = 0; k < positions.Length; k++)
                 {
                     //Check if its looking at its self
                     if (k == i) { continue; }
                     //If node also contains another planet split node
-                    if (NodeContainsTransform(transforms[k].position, currentNode))
+                    if (NodeContainsTransform(positions[k], currentNode))
                     {
-                        for (int l = 0; l < 8; l++)
+                        NativeArray<int> childIndexes = new NativeArray<int>(8, Allocator.Temp);
+                        //If it is end node create children
+                        if(currentNode.endNode)
                         {
-                            Vector3 offset = OctreeData.GetOffsetVector(l);
-                            nodes.Add(currentNode.PopulateChild(
-                                l,
-                                new OctreeData()
-                                {
-                                    center = currentNode.data.center + offset * currentNode.data.radius * .5f,
-                                    radius = currentNode.data.radius * .5f,
-                                    hasPlanet = false
-                                },
-                                nodes.Length));
-                            nodes[j] = currentNode;
+                            for (int l = 0; l < 8; l++)
+                            {
+                                Vector3 offset = SpacialOctreeData.GetOffsetVector(l);
+
+                                nodes.Add(currentNode.PopulateChild(
+                                    l,
+                                    new NBodyOctreeData(),
+                                    nodes.Length));
+
+                                nodes[searchNodeIndexes[j]] = currentNode;
+                                childIndexes[l] = currentNode.nodeChildren.GetChildIndex(l);
+                            }
                         }
-                        Debug.Log("Oopsie");
-                        Recursive(transforms, i);
+                        else
+                        {
+                            for (int l = 0; l < 8; l++)
+                            {
+                                childIndexes[l] = currentNode.nodeChildren.GetChildIndex(l);
+                            }
+                        }
+                        //Debug.Log("Oopsie");
+                       
+                        Recursive(positions, i, childIndexes);
+                        childIndexes.Dispose();
                         return false;
                     }
                 }
                 //Add planet to node
                 currentNode.data.hasPlanet = true;
-                currentNode.data.objectPos = transforms[i].position;
-                nodes[j] = currentNode;
-                Debug.Log("Found Node");
+                currentNode.data.centerOfMass = positions[i];
+                nodes[searchNodeIndexes[j]] = currentNode;
+                //Debug.Log("Found Node");
                 return true;
             }
-            
+
         }
         return false;
     }
 
-
-    public bool NodeContainsTransform(Vector3 pos, Node<OctreeData> node)
+    private bool RecursiveRework(NativeArray<Vector3> positions, int i, int searchNodeIndex)
     {
-        return (pos.x < node.data.center.x + node.data.radius && pos.x > node.data.center.x - node.data.radius &&
-                pos.y < node.data.center.y + node.data.radius && pos.y > node.data.center.y - node.data.radius &&
-                pos.z < node.data.center.z + node.data.radius && pos.z > node.data.center.z - node.data.radius);
+        Node<NBodyOctreeData> currentNode = nodes[searchNodeIndex];
+        //If node isnt and end node skip to children
+        if (!currentNode.endNode)
+        {
+            RecursiveRework(positions, i, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildQuadIndex(positions[i]))/*Index Of Child Quadrent That Planet Is In*/);
+            return false;
+        }
+        //Loop all transforms to check for other transforms in same area
+        //TODO: Possible optimaztions to widdle down positions array as more planets get sorted
+        for (int k = 0; k < positions.Length; k++)
+        {
+            //Check if its looking at its self
+            if (k == i) { continue; }
+            //If node also contains another planet split node
+            if (NodeContainsTransform(positions[k], currentNode))
+            {
+                for (int l = 0; l < 8; l++)
+                {
+                    nodes.Add(currentNode.PopulateChild(
+                        l,
+                        new NBodyOctreeData(),
+                        nodes.Length));
+
+                    nodes[searchNodeIndex] = currentNode;
+                }
+                RecursiveRework(positions, i, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildQuadIndex(positions[i])));
+                return false;
+            }
+        }
+        //Add planet to node
+
+        currentNode.data.hasPlanet = true;
+        currentNode.data.centerOfMass = positions[i];
+        nodes[searchNodeIndex] = currentNode;
+        //Debug.Log("Found Node");
+        return true;
+    }
+
+    public static bool NodeContainsTransform(Vector3 pos, Node<NBodyOctreeData> node)
+    {
+        return (pos.x < node.spacialData.center.x + node.spacialData.radius && pos.x > node.spacialData.center.x - node.spacialData.radius &&
+                pos.y < node.spacialData.center.y + node.spacialData.radius && pos.y > node.spacialData.center.y - node.spacialData.radius &&
+                pos.z < node.spacialData.center.z + node.spacialData.radius && pos.z > node.spacialData.center.z - node.spacialData.radius);
+    }
+
+    public Transform[] ObjectSpawner(int num, float radius, GameObject prefab)
+    {
+        List<Transform> transforms = new List<Transform>();
+        for (int i = 0; i < num; i++)
+        {
+            transforms.Add(Instantiate(prefab).transform);
+            transforms[i].position = new Vector3(Random.Range(-radius, radius), Random.Range(-radius, radius), Random.Range(-radius, radius));
+        }
+        return transforms.ToArray();
     }
 }
