@@ -14,19 +14,40 @@ public class CreateTree : MonoBehaviour
 
     //public List<NodeRef<NBodyOctreeData>> nodesRef;
 
-    public bool useRef;
+    public bool useOriginal;
 
     public GameObject prefab;
 
     public Transform[] objects;
 
+    NativeArray<Vector3> positions;
+
     private void Start()
     {
-        
+
         objects = ObjectSpawner(5000, 63f, prefab);
 
-        //Data
-        
+        PreWork();
+
+        Debug.Log("Original Method");
+        Timer.Start();
+        BarnesHut(positions);
+        Timer.Stop();
+
+        positions.Dispose();
+
+
+        PreWork();
+        Debug.Log("Reworked Method");
+        Timer.Start();
+        BarnesHutRework(positions);
+        Timer.Stop();
+
+        positions.Dispose();
+    }
+
+    private void PreWork()
+    {
         nodes = new NativeList<Node<NBodyOctreeData>>(0, Allocator.Persistent);
 
         nodes.Add(Node<NBodyOctreeData>.CreateNewNode(
@@ -39,39 +60,22 @@ public class CreateTree : MonoBehaviour
             -1,
             0));
 
-        NativeArray<Vector3> positions = new NativeArray<Vector3>(objects.Length, Allocator.TempJob);
+        positions = new NativeArray<Vector3>(objects.Length, Allocator.Temp);
         for (int i = 0; i < objects.Length; i++)
         {
             positions[i] = objects[i].position;
         }
-        Timer.Start();
-        BarnesHut(positions);
-        Timer.Stop();
-
-        //Timer.Start();
-        //BarnesHutRework(positions);
-        //Timer.Stop();
-
-        //foreach (NBodyOctreeData data in nodes[0].GetAllData(nodes))
-        //{
-        //    //Debug.Log(data.centerOfMass);
-        //    //Debug.Log(data.mass);
-        //}
-
     }
 
     private void Update()
     {
-        if (!useRef)
+        //Data Drawer
+        for (int i = 0; i < nodes.Length; i++)
         {
-            //Data Drawer
-            for (int i = 0; i < nodes.Length; i++)
-            {
-                if (drawDepth == -1)
-                    DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
-                else if (nodes[i].GetDepth(nodes) == drawDepth)
-                    DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
-            }
+            if (drawDepth == -1)
+                DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
+            else if (nodes[i].GetDepth(nodes) == drawDepth)
+                DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
         }
     }
 
@@ -142,7 +146,7 @@ public class CreateTree : MonoBehaviour
 
 
 
-    //TODO: Bruh clean this shit up, like for real you wrote this?
+    //TODO: Bruh clean this shit up. like, for real, you wrote this?
     private bool Recursive(NativeArray<Vector3> positions, int i, NativeArray<int> searchNodeIndexes)
     {
         //This needs to be recursive and recalled after creating more nodes if none are valid
@@ -153,8 +157,6 @@ public class CreateTree : MonoBehaviour
             //If node contains transforms position
             if (NodeContainsTransform(positions[i], currentNode))
             {
-                //If node isnt and end node skip to children
-                if (!currentNode.endNode) { continue; }
                 //Loop all transforms to check for other transforms in same area
                 for (int k = 0; k < positions.Length; k++)
                 {
@@ -198,10 +200,8 @@ public class CreateTree : MonoBehaviour
                 currentNode.data.hasPlanet = true;
                 currentNode.data.centerOfMass = positions[i];
                 nodes[searchNodeIndexes[j]] = currentNode;
-                //Debug.Log("Found Node");
                 return true;
             }
-
         }
         return false;
     }
@@ -238,11 +238,9 @@ public class CreateTree : MonoBehaviour
             }
         }
         //Add planet to node
-
         currentNode.data.hasPlanet = true;
         currentNode.data.centerOfMass = positions[i];
         nodes[searchNodeIndex] = currentNode;
-        //Debug.Log("Found Node");
         return true;
     }
 

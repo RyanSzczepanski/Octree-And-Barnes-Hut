@@ -16,6 +16,6 @@ public class Timer
     public static void Stop()
     {
         endTime = Time.realtimeSinceStartup;
-        Debug.Log(endTime - startTime);
+        Debug.Log($"{(endTime - startTime) * 1000} ms");
     }
 }

@@ -155,7 +155,7 @@ MonoBehaviour:
   depth: 5
   drawDepth: 0
   nodesDebug: []
-  useRef: 0
+  useOriginal: 1
   prefab: {fileID: 971759377987228819, guid: d9ec6423a53229e43b0b46dd03372774, type: 3}
   objects:
   - {fileID: 0}
