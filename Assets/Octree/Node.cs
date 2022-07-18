@@ -100,6 +100,8 @@ public struct Node<Data>
             this.index,
             index);
     }
+
+    
 }
 
 [System.Serializable]
@@ -188,21 +190,22 @@ public struct SpacialOctreeData
     public int GetChildOctantsIndex(Vector3 position)
     {
         Vector3 localPosition = position - center;
-        char[] binary = new char[3];
-        if (localPosition.x > 0)
-            binary[0] = '0';
-        else
-            binary[0] = '1';
-        if (localPosition.y > 0)
-            binary[1] = '0';
-        else
-            binary[1] = '1';
-        if (localPosition.z > 0)
-            binary[2] = '0';
-        else
-            binary[2] = '1';
+        int output = 0;
+        if (localPosition.x < 0)
+            output = 1 << 0;
+        if (localPosition.y < 0)
+            output = 1 << 1;
+        if (localPosition.z < 0)
+            output = 1 << 2;
+        //Debug.Log(output);
+        return output;
+    }
 
-        return Convert.ToInt32(new string(binary), 2);
+    public bool ContainsPosition(Vector3 pos)
+    {
+        return (pos.x < center.x + radius && pos.x > center.x - radius &&
+                pos.y < center.y + radius && pos.y > center.y - radius &&
+                pos.z < center.z + radius && pos.z > center.z - radius);
     }
 }
 

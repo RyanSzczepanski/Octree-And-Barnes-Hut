@@ -153,8 +153,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   depth: 5
-  n: 20000
-  drawDepth: 0
+  n: 100000
+  drawDepth: 1
   nodesDebug: []
   useOriginal: 1
   prefab: {fileID: 971759377987228819, guid: d9ec6423a53229e43b0b46dd03372774, type: 3}
