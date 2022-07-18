@@ -31,25 +31,24 @@ public class CreateTree : MonoBehaviour
 
         objects = ObjectSpawner(n, 63f, prefab);
 
-        PreWork();
-
-        Debug.Log("Original Method");
-        Timer.Start();
+        //PreWork();
+        //Debug.Log("Original Method");
+        //Timer.Start();
         //BarnesHut(positions);
-        Timer.Stop();
+        //Timer.Stop();
 
-        positions.Dispose();
-        positionsList.Dispose();
+        //positions.Dispose();
+        //positionsList.Dispose();
 
 
-        PreWork();
-        Debug.Log("Reworked Method");
-        Timer.Start();
+        //PreWork();
+        //Debug.Log("Reworked Method");
+        //Timer.Start();
         //BarnesHutRework(positions);
-        Timer.Stop();
+        //Timer.Stop();
 
-        positions.Dispose();
-        positionsList.Dispose();
+        //positions.Dispose();
+        //positionsList.Dispose();
 
 
         PreWork();
@@ -61,6 +60,8 @@ public class CreateTree : MonoBehaviour
         positions.Dispose();
         positionsList.Dispose();
 
+
+        nodesDebug = nodes.ToArray();
     }
 
     private void PreWork()
@@ -142,25 +143,6 @@ public class CreateTree : MonoBehaviour
         }
     }
 
-    void BarnesHut(NativeArray<Vector3> positions)
-    {
-        NativeArray<int> nativeArrray = new NativeArray<int>(1, Allocator.Temp);
-        nativeArrray[0] = 0;
-        for (int i = 0; i < positions.Length; i++)
-        {
-            Recursive(positions, i, nativeArrray);
-        }
-        nativeArrray.Dispose();
-    }
-
-    void BarnesHutRework(NativeArray<Vector3> positions)
-    {
-        for (int i = 0; i < positions.Length; i++)
-        {
-            RecursiveRework(positions, i, 0);
-        }
-    }
-
     void BarnesHutSecondRework(NativeList<Vector3> positions)
     {
         for (int i = positions.Length - 1; i >= 0; i--)
@@ -173,112 +155,26 @@ public class CreateTree : MonoBehaviour
     }
 
 
-
-    //TODO: Bruh clean this shit up. like, for real, you wrote this?
-    private bool Recursive(NativeArray<Vector3> positions, int i, NativeArray<int> searchNodeIndexes)
-    {
-        //This needs to be recursive and recalled after creating more nodes if none are valid
-        //Loop all nodes looking for open node
-        for (int j = 0; j < searchNodeIndexes.Length; j++)
-        {
-            Node<NBodyOctreeData> currentNode = nodes[searchNodeIndexes[j]];
-            //If node contains transforms position
-            if (NodeContainsTransform(positions[i], currentNode))
-            {
-                //Loop all transforms to check for other transforms in same area
-                for (int k = 0; k < positions.Length; k++)
-                {
-                    //Check if its looking at its self
-                    if (k == i) { continue; }
-                    //If node also contains another planet split node
-                    if (NodeContainsTransform(positions[k], currentNode))
-                    {
-                        NativeArray<int> childIndexes = new NativeArray<int>(8, Allocator.Temp);
-                        //If it is end node create children
-                        if(currentNode.endNode)
-                        {
-                            for (int l = 0; l < 8; l++)
-                            {
-                                Vector3 offset = SpacialOctreeData.GetOffsetVector(l);
-
-                                nodes.Add(currentNode.PopulateChild(
-                                    l,
-                                    new NBodyOctreeData(),
-                                    nodes.Length));
-
-                                nodes[searchNodeIndexes[j]] = currentNode;
-                                childIndexes[l] = currentNode.nodeChildren.GetChildIndex(l);
-                            }
-                        }
-                        else
-                        {
-                            for (int l = 0; l < 8; l++)
-                            {
-                                childIndexes[l] = currentNode.nodeChildren.GetChildIndex(l);
-                            }
-                        }
-                        //Debug.Log("Oopsie");
-                       
-                        Recursive(positions, i, childIndexes);
-                        childIndexes.Dispose();
-                        return false;
-                    }
-                }
-                //Add planet to node
-                currentNode.data.hasPlanet = true;
-                currentNode.data.centerOfMass = positions[i];
-                nodes[searchNodeIndexes[j]] = currentNode;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private bool RecursiveRework(NativeArray<Vector3> positions, int i, int searchNodeIndex)
-    {
-        Node<NBodyOctreeData> currentNode = nodes[searchNodeIndex];
-        //If node isnt and end node skip to children
-        if (!currentNode.endNode)
-        {
-            RecursiveRework(positions, i, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildQuadIndex(positions[i]))/*Index Of Child Quadrent That Planet Is In*/);
-            return false;
-        }
-        //Loop all transforms to check for other transforms in same area
-        //TODO: Possible optimaztions to widdle down positions array as more planets get sorted
-        for (int k = 0; k < positions.Length; k++)
-        {
-            //Check if its looking at its self
-            if (k == i) { continue; }
-            //If node also contains another planet split node
-            if (NodeContainsTransform(positions[k], currentNode))
-            {
-                for (int l = 0; l < 8; l++)
-                {
-                    nodes.Add(currentNode.PopulateChild(
-                        l,
-                        new NBodyOctreeData(),
-                        nodes.Length));
-
-                    nodes[searchNodeIndex] = currentNode;
-                }
-                RecursiveRework(positions, i, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildQuadIndex(positions[i])));
-                return false;
-            }
-        }
-        //Add planet to node
-        currentNode.data.hasPlanet = true;
-        currentNode.data.centerOfMass = positions[i];
-        nodes[searchNodeIndex] = currentNode;
-        return true;
-    }
-
     private bool RecursiveSecondRework(NativeArray<Vector3> positions, int i, int searchNodeIndex)
     {
         Node<NBodyOctreeData> currentNode = nodes[searchNodeIndex];
         //If node isnt and end node skip to children
         if (!currentNode.endNode)
         {
-            return RecursiveSecondRework(positions, i, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildQuadIndex(positions[i]))/*Index Of Child Quadrent That Planet Is In*/);
+            //TODO: Duplicate code break out into function
+            int childOctants = currentNode.spacialData.GetChildOctantsIndex(positions[i]);
+            int nextNodeToSearch = currentNode.nodeChildren.GetChildIndex(childOctants);
+            if (nextNodeToSearch == -1)
+            {
+                nodes.Add(currentNode.PopulateChild(
+                    childOctants,
+                    new NBodyOctreeData(),
+                    nodes.Length));
+                nextNodeToSearch = nodes.Length - 1;
+                nodes[searchNodeIndex] = currentNode;
+            }
+            //
+            return RecursiveSecondRework(positions, i, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(positions[i]))/*Index Of Child Quadrent That Planet Is In*/);
         }
         //Loop all transforms to check for other transforms in same area
         //TODO: Possible optimaztions to widdle down positions array as more planets get sorted
@@ -289,16 +185,31 @@ public class CreateTree : MonoBehaviour
             //If node also contains another planet split node
             if (NodeContainsTransform(positions[k], currentNode))
             {
-                for (int l = 0; l < 8; l++)
+                //TODO: Duplicate code break out into function
+                int childOctants = currentNode.spacialData.GetChildOctantsIndex(positions[i]);
+                int nextNodeToSearch = currentNode.nodeChildren.GetChildIndex(childOctants);
+                if (nextNodeToSearch == -1)
                 {
                     nodes.Add(currentNode.PopulateChild(
-                        l,
+                        childOctants,
                         new NBodyOctreeData(),
                         nodes.Length));
-
+                    nextNodeToSearch = nodes.Length - 1;
                     nodes[searchNodeIndex] = currentNode;
                 }
-                return RecursiveSecondRework(positions, i, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildQuadIndex(positions[i])));
+                return RecursiveSecondRework(positions, i, nextNodeToSearch);
+                //
+                //for (int l = 0; l < 8; l++)
+                //{
+                //    nodes.Add(currentNode.PopulateChild(
+                //        l,
+                //        new NBodyOctreeData(),
+                //        nodes.Length));
+
+                //    nodes[searchNodeIndex] = currentNode;
+                //}
+                //return RecursiveSecondRework(positions, i, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(positions[i])));
+
             }
         }
         //Add planet to node

@@ -153,7 +153,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   depth: 5
-  n: 0
+  n: 20000
   drawDepth: 0
   nodesDebug: []
   useOriginal: 1

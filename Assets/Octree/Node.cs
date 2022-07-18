@@ -185,7 +185,7 @@ public struct SpacialOctreeData
         return offset;
     }
 
-    public int GetChildQuadIndex(Vector3 position)
+    public int GetChildOctantsIndex(Vector3 position)
     {
         Vector3 localPosition = position - center;
         char[] binary = new char[3];
