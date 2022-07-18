@@ -7,6 +7,9 @@ using UnityEngine;
 public class CreateTree : MonoBehaviour
 {
     public int depth;
+
+    public int n;
+
     [Range(-1f, 10f)]
     public int drawDepth;
     public NativeList<Node<NBodyOctreeData>> nodes;
@@ -25,7 +28,7 @@ public class CreateTree : MonoBehaviour
     private void Start()
     {
 
-        objects = ObjectSpawner(5000, 63f, prefab);
+        objects = ObjectSpawner(n, 63f, prefab);
 
         PreWork();
 
