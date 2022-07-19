@@ -13,68 +13,40 @@ public class CreateTree : MonoBehaviour
     [Range(-1f, 10f)]
     public int drawDepth;
     public NativeList<Node<NBodyOctreeData>> nodes;
+    public NativeList<Node<NBodyOctreeData>> newNodes;
     public Node<NBodyOctreeData>[] nodesDebug;
-
-    //public List<NodeRef<NBodyOctreeData>> nodesRef;
 
     public bool useOriginal;
 
+    public bool jobCompleted = false;
+
     public GameObject prefab;
 
-    public Transform[] objects;
+    public Transform[] objects = new Transform[0];
 
-    NativeArray<Vector3> positions;
     NativeList<Vector3> positionsList;
+
+    //BarnesHut barnesHut;
+    JobHandle jobHandle;
 
     private void Start()
     {
+        nodes = new NativeList<Node<NBodyOctreeData>>(0, Allocator.Persistent);
+        newNodes = new NativeList<Node<NBodyOctreeData>>(0, Allocator.Persistent);
+        positionsList = new NativeList<Vector3>(0, Allocator.Persistent);
 
-        objects = ObjectSpawner(n, 63f, prefab);
-
-        //PreWork();
-        //Debug.Log("Original Method");
-        //Timer.Start();
-        //BarnesHut(positions);
-        //Timer.Stop();
-
-        //positions.Dispose();
-        //positionsList.Dispose();
-
-
-        //PreWork();
-        //Debug.Log("Reworked Method");
-        //Timer.Start();
-        //BarnesHutRework(positions);
-        //Timer.Stop();
-
-        //positions.Dispose();
-        //positionsList.Dispose();
-
-
-        PreWork();
-        Debug.Log("Second Reworked Method");
-        Timer.Start();
-        BarnesHut barnesHut = new BarnesHut()
-        {
-            nodes = nodes,
-            positions = positionsList
-        };
-        JobHandle jobHanlde = barnesHut.Schedule();
-        jobHanlde.Complete();
-        Timer.Stop();
-
-        positions.Dispose();
-        positionsList.Dispose();
-
-
-        nodesDebug = nodes.ToArray();
+        
     }
 
     private void PreWork()
     {
-        nodes = new NativeList<Node<NBodyOctreeData>>(0, Allocator.Persistent);
+        newNodes.Clear();
+        positionsList.Clear();
 
-        nodes.Add(Node<NBodyOctreeData>.CreateNewNode(
+        if (n > 0)
+            objects = ObjectSpawner(n, 63, prefab, false);
+
+        newNodes.Add(Node<NBodyOctreeData>.CreateNewNode(
             new NBodyOctreeData(),
             new SpacialOctreeData()
             {
@@ -83,25 +55,124 @@ public class CreateTree : MonoBehaviour
             },
             -1,
             0));
-        positionsList = new NativeList<Vector3>(0, Allocator.TempJob);
-        positions = new NativeArray<Vector3>(objects.Length, Allocator.TempJob);
+       
+        if(n <= 0)
+        {
+            for (int i = 0; i < objects.Length; i++)
+            {
+                positionsList.Add(objects[i].position);
+            }
+        }   
+    }
+
+    private void LateUpdate()
+    {
         for (int i = 0; i < objects.Length; i++)
         {
-            positionsList.Add(objects[i].position);
-            positions[i] = objects[i].position;
+            Destroy(objects[i].gameObject);
         }
     }
 
     private void Update()
     {
-        //Data Drawer
-        for (int i = 0; i < nodes.Length; i++)
+        //if (jobHandle.IsCompleted && !jobCompleted)
+        //{
+        //    jobCompleted = true;
+
+        //    jobHandle.Complete();
+        //    barnesHutTimer.Stop();
+        //    Debug.Log(barnesHut.nodes.Length);
+        //    //nodes.Clear();
+        //    //nodes.AddRange(barnesHut.nodes);
+
+        //    nodesDebug = nodes.ToArray();
+        //}
+        //if (jobCompleted)
+        //{
+        //    if (n > 0)
+        //        objects = ObjectSpawner(n, 63f, prefab, false);
+
+        //    PreWork();
+        //    barnesHutTimer.Start();
+
+        //    barnesHut = new BarnesHut()
+        //    {
+        //        nodes = newNodes,
+        //        positions = positionsList
+        //    };
+        //    jobHandle = barnesHut.Schedule();
+
+        //    jobCompleted = false;
+        //}
+        
+
+        PreWork();
+
+        BarnesHut barnesHut = new BarnesHut()
         {
-            if (drawDepth == -1)
-                DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
-            else if (nodes[i].GetDepth(nodes) == drawDepth)
-                DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
+            positions = positionsList,
+            nodes = newNodes,
+        };
+
+        jobHandle = barnesHut.Schedule();
+        jobHandle.Complete();
+        nodes = barnesHut.nodes;
+        //nodesDebug = nodes.ToArray();
+
+        
+
+
+
+        //List<Node<NBodyOctreeData>> nodesToDraw = new List<Node<NBodyOctreeData>>();
+        //Data Drawer
+        if (drawDepth != -1)
+        {
+            foreach (Node<NBodyOctreeData> node in GetAllNodesAtDepth(0, drawDepth))
+            {
+                DebugRenderer.DrawCube(node.spacialData.center, node.spacialData.radius, new Color(1, 1 - node.GetDepth(nodes) / (float)depth, 0), 0f);
+            }
         }
+        else
+        {
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                if (nodes[i].endNode)
+                {
+                    DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
+                }
+            }
+        }
+    }
+    private Node<NBodyOctreeData>[] GetAllNodesAtDepth(int parentIndex, int depth)
+    {
+        if (nodes[parentIndex].GetDepth(nodes) == depth)
+        {
+            return new Node<NBodyOctreeData>[1] { nodes[parentIndex] };
+        }
+        else if (nodes[parentIndex].GetDepth(nodes) < depth)
+        {
+            if (nodes[parentIndex].endNode) { return new Node<NBodyOctreeData>[0]; }
+
+            if (nodes[parentIndex].GetDepth(nodes) == depth - 1)
+            {
+                Node<NBodyOctreeData>[] childNodes = new Node<NBodyOctreeData>[8];
+                for (int i = 0; i < 8; i++)
+                {
+                    childNodes[i] = nodes[nodes[parentIndex].nodeChildren.GetChildIndex(i)];
+                }
+                return childNodes;
+            }
+            else
+            {
+                List<Node<NBodyOctreeData>> nodeses = new List<Node<NBodyOctreeData>>();
+                for (int i = 0; i < 8; i++)
+                {
+                    nodeses.AddRange(GetAllNodesAtDepth(nodes[parentIndex].nodeChildren.GetChildIndex(i), depth));
+                }
+                return nodeses.ToArray();
+            }
+        }
+        return new Node<NBodyOctreeData>[0];
     }
 
     private void BuildNodesToDepth(int depth)
@@ -151,13 +222,17 @@ public class CreateTree : MonoBehaviour
 
     
 
-    public Transform[] ObjectSpawner(int num, float radius, GameObject prefab)
+    public Transform[] ObjectSpawner(int num, float radius, GameObject prefab, bool visableObject)
     {
         List<Transform> transforms = new List<Transform>();
         for (int i = 0; i < num; i++)
         {
-            transforms.Add(Instantiate(prefab).transform);
-            transforms[i].position = new Vector3(Random.Range(-radius, radius), Random.Range(-radius, radius), Random.Range(-radius, radius));
+            positionsList.Add(new Vector3(Random.Range(-radius, radius), Random.Range(-radius, radius), Random.Range(-radius, radius)));
+            if (visableObject)
+            {
+                transforms.Add(Instantiate(prefab).transform);
+                transforms[i].position = positionsList[i];
+            }
         }
         return transforms.ToArray();
     }

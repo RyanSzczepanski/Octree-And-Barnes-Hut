@@ -16,109 +16,16 @@ public struct BarnesHut : IJob
         SortRework();
     }
 
-    public void Sort()
-    {
-        for (int i = positions.Length - 1; i >= 0; i--)
-        {
-            if (Recursive(i, 0, true))
-            {
-                positions.RemoveAt(i);
-            }
-        }
-    }
-
-
-    private bool Recursive(int i, int searchNodeIndex, bool generateAllChildren)
-    {
-        Node<NBodyOctreeData> currentNode = nodes[searchNodeIndex];
-        //If node isnt and end node skip to children
-        if (!currentNode.endNode)
-        {
-            if (!generateAllChildren)
-            {
-                //TODO: Duplicate code break out into function
-                int childOctants = currentNode.spacialData.GetChildOctantsIndex(positions[i]);
-                int nextNodeToSearch = currentNode.nodeChildren.GetChildIndex(childOctants);
-                if (nextNodeToSearch == -1)
-                {
-                    nodes.Add(currentNode.PopulateChild(
-                        childOctants,
-                        new NBodyOctreeData(),
-                        nodes.Length));
-                    nextNodeToSearch = nodes.Length - 1;
-                    nodes[searchNodeIndex] = currentNode;
-                }
-                //
-                return Recursive(i, nextNodeToSearch, generateAllChildren);
-            }
-            else
-            {
-                return Recursive(i, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(positions[i]))/*Index Of Child Quadrent That Planet Is In*/, generateAllChildren);
-            }
-
-            
-        }
-        //Loop all remaining transforms to check for other transforms in same area
-        for (int k = 0; k < positions.Length; k++)
-        {
-            //Check if its looking at its self
-            if (k == i) { continue; }
-            //If node also contains another planet split node
-            if (currentNode.spacialData.ContainsPosition(positions[k]))
-            {
-                if (!generateAllChildren)
-                {
-                    //TODO: Duplicate code break out into function
-                    int childOctants = currentNode.spacialData.GetChildOctantsIndex(positions[i]);
-                    int nextNodeToSearch = currentNode.nodeChildren.GetChildIndex(childOctants);
-                    if (nextNodeToSearch == -1)
-                    {
-                        nodes.Add(currentNode.PopulateChild(
-                            childOctants,
-                            new NBodyOctreeData(),
-                            nodes.Length));
-                        nextNodeToSearch = nodes.Length - 1;
-                        nodes[searchNodeIndex] = currentNode;
-                    }
-                    return Recursive(i, nextNodeToSearch, generateAllChildren);
-                    //
-                }
-                else
-                {
-                    for (int l = 0; l < 8; l++)
-                    {
-                        nodes.Add(currentNode.PopulateChild(
-                            l,
-                            new NBodyOctreeData(),
-                            nodes.Length));
-
-                        nodes[searchNodeIndex] = currentNode;
-                    }
-                    return Recursive(i, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(positions[i])), generateAllChildren);
-                }
-            }
-        }
-        //Add planet to node
-        currentNode.data.hasPlanet = true;
-        currentNode.data.centerOfMass = positions[i];
-        nodes[searchNodeIndex] = currentNode;
-        return true;
-    }
-
-
     public void SortRework()
     {
         for (int i = 0; i < positions.Length; i++)
         {
-            if (RecursiveRework(positions[i], 0, true))
-            {
-                positions.RemoveAt(i);
-            }
+            RecursiveRework(positions[i], 0, true);
         }
     }
 
 
-    private bool RecursiveRework(Vector3 position, int searchNodeIndex, bool generateAllChildren)
+    private void RecursiveRework(Vector3 position, int searchNodeIndex, bool generateAllChildren)
     {
         Node<NBodyOctreeData> currentNode = nodes[searchNodeIndex];
         //If node isnt and end node skip to children
@@ -136,17 +43,17 @@ public struct BarnesHut : IJob
                         new NBodyOctreeData(),
                         nodes.Length));
                     nextNodeToSearch = nodes.Length - 1;
-                    nodes[searchNodeIndex] = currentNode;
                 }
-                //
-                return RecursiveRework(position, nextNodeToSearch, generateAllChildren);
+                nodes[searchNodeIndex] = currentNode;
+                RecursiveRework(position, nextNodeToSearch, generateAllChildren);
+                return;
             }
             else
             {
-                return RecursiveRework(position, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(position))/*Index Of Child Quadrent That Planet Is In*/, generateAllChildren);
+                nodes[searchNodeIndex] = currentNode;
+                RecursiveRework(position, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(position))/*Index Of Child Quadrent That Planet Is In*/, generateAllChildren);
+                return;
             }
-
-
         }
 
         //If node has a planet bump both down a layer
@@ -166,7 +73,6 @@ public struct BarnesHut : IJob
                         new NBodyOctreeData(),
                         nodes.Length));
                     nextNodeToSearch = nodes.Length - 1;
-                    nodes[searchNodeIndex] = currentNode;
                 }
 
                 int childOctants2 = currentNode.spacialData.GetChildOctantsIndex(preExistingPlanet);
@@ -180,8 +86,11 @@ public struct BarnesHut : IJob
                     nextNodeToSearch2 = nodes.Length - 1;
                     nodes[searchNodeIndex] = currentNode;
                 }
+
+                nodes[searchNodeIndex] = currentNode;
                 RecursiveRework(preExistingPlanet, nextNodeToSearch2, generateAllChildren);
                 RecursiveRework(position, nextNodeToSearch, generateAllChildren);
+                return;
                 //
             }
             else
@@ -195,14 +104,16 @@ public struct BarnesHut : IJob
 
                     nodes[searchNodeIndex] = currentNode;
                 }
+                nodes[searchNodeIndex] = currentNode;
                 RecursiveRework(preExistingPlanet, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(preExistingPlanet)), generateAllChildren);
-                return RecursiveRework(position, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(position)), generateAllChildren);
+                RecursiveRework(position, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(position)), generateAllChildren);
+                return;
             }
         }
         //Add planet to node
         currentNode.data.hasPlanet = true;
         currentNode.data.centerOfMass = position;
         nodes[searchNodeIndex] = currentNode;
-        return true;
+        return;
     }
 }

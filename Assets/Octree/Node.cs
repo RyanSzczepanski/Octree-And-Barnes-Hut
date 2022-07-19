@@ -192,12 +192,11 @@ public struct SpacialOctreeData
         Vector3 localPosition = position - center;
         int output = 0;
         if (localPosition.x < 0)
-            output = 1 << 0;
+            output = output | 1 << 2;
         if (localPosition.y < 0)
-            output = 1 << 1;
+            output = output | 1 << 1;
         if (localPosition.z < 0)
-            output = 1 << 2;
-        //Debug.Log(output);
+            output = output | 1 << 0;
         return output;
     }
 
@@ -209,6 +208,7 @@ public struct SpacialOctreeData
     }
 }
 
+[System.Serializable]
 public struct NBodyOctreeData
 {
     public bool hasPlanet;

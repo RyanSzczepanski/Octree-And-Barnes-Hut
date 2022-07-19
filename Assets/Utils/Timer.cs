@@ -8,12 +8,12 @@ public class Timer
     private static float startTime;
     private static float endTime;
 
-    public static void Start()
+    public void Start()
     {
         startTime = Time.realtimeSinceStartup;
     }
 
-    public static void Stop()
+    public void Stop()
     {
         endTime = Time.realtimeSinceStartup;
         Debug.Log($"{(endTime - startTime) * 1000} ms");
