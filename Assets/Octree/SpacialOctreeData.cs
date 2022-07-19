@@ -1,14 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 
 [System.Serializable]
 public struct SpacialOctreeData
 {
-    public Vector3 center;
+    public float3 center;
     public float radius;
 
-    public static Vector3 GetOffsetVector(int ChildIndex)
+    public static float3 GetOffsetVector(int ChildIndex)
     {
         Vector3 offset = Vector3.zero;
         switch (ChildIndex)
@@ -41,9 +42,9 @@ public struct SpacialOctreeData
         return offset;
     }
 
-    public int GetChildOctantsIndex(Vector3 position)
+    public int GetChildOctantsIndex(float3 position)
     {
-        Vector3 localPosition = position - center;
+        double3 localPosition = position - center;
         int output = 0;
         if (localPosition.x < 0)
             output = output | 1 << 2;
@@ -54,7 +55,7 @@ public struct SpacialOctreeData
         return output;
     }
 
-    public bool ContainsPosition(Vector3 pos)
+    public bool ContainsPosition(float3 pos)
     {
         return (pos.x < center.x + radius && pos.x > center.x - radius &&
                 pos.y < center.y + radius && pos.y > center.y - radius &&

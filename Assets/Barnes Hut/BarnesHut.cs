@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 
 [BurstCompile]
 public struct BarnesHut : IJob
 {
-    public NativeList<Vector3> positions;
+    public NativeList<float3> positions;
     public NativeList<Node<NBodyNodeData>> nodes;
 
     public void Execute()
@@ -25,7 +26,7 @@ public struct BarnesHut : IJob
     }
 
 
-    private void Recursive(Vector3 position, int searchNodeIndex)
+    private void Recursive(float3 position, int searchNodeIndex)
     {
         Node<NBodyNodeData> currentNode = nodes[searchNodeIndex];
         //If node isnt and end node skip to children
@@ -38,7 +39,7 @@ public struct BarnesHut : IJob
         //If node has a planet bump both down a layer
         if (currentNode.data.hasPlanet)
         {
-            Vector3 existingPlanetPos = currentNode.data.centerOfMass;
+            float3 existingPlanetPos = currentNode.data.centerOfMass;
             currentNode.data.hasPlanet = false;
             //Generates all children
             for (int l = 0; l < 8; l++)

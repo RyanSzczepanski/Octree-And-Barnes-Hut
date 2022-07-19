@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Jobs;
+using Unity.Mathematics;
 using UnityEngine;
 
 public class CreateTree : MonoBehaviour
@@ -17,7 +18,7 @@ public class CreateTree : MonoBehaviour
     public GameObject prefab;
     public Transform[] objects = new Transform[0];
 
-    NativeList<Vector3> positionsList;
+    NativeList<float3> positionsList;
 
     JobHandle jobHandle;
 
@@ -25,9 +26,11 @@ public class CreateTree : MonoBehaviour
     {
         nodes = new NativeList<Node<NBodyNodeData>>(0, Allocator.Persistent);
         newNodes = new NativeList<Node<NBodyNodeData>>(0, Allocator.Persistent);
-        positionsList = new NativeList<Vector3>(0, Allocator.Persistent);
-
-        GenerateTree();
+        positionsList = new NativeList<float3>(0, Allocator.Persistent);
+        //Timer timer = new Timer();
+        //timer.Start();
+        //GenerateTree();
+        //timer.Stop();
     }
 
     private void PreWork()
@@ -42,7 +45,7 @@ public class CreateTree : MonoBehaviour
             new NBodyNodeData(),
             new SpacialOctreeData()
             {
-                center = Vector3.zero,
+                center = float3.zero,
                 radius = 64,
             },
             -1,
@@ -52,7 +55,7 @@ public class CreateTree : MonoBehaviour
         {
             for (int i = 0; i < objects.Length; i++)
             {
-                positionsList.Add(objects[i].position);
+                positionsList.Add((float3)objects[i].position);
             }
         }   
     }
@@ -67,7 +70,7 @@ public class CreateTree : MonoBehaviour
 
     private void Update()
     {
-        //GenerateTree();
+        GenerateTree();
 
         //Data Drawer
         if (drawDepth != -1)
@@ -102,7 +105,7 @@ public class CreateTree : MonoBehaviour
         jobHandle = barnesHut.Schedule();
         jobHandle.Complete();
         nodes = barnesHut.nodes;
-        nodesDebug = nodes.ToArray();
+        //nodesDebug = nodes.ToArray();
     }
 
     private Node<NBodyNodeData>[] GetAllNodesAtDepth(int parentIndex, int depth)
@@ -142,7 +145,7 @@ public class CreateTree : MonoBehaviour
         List<Transform> transforms = new List<Transform>();
         for (int i = 0; i < num; i++)
         {
-            positionsList.Add(new Vector3(Random.Range(-radius, radius), Random.Range(-radius, radius), Random.Range(-radius, radius)));
+            positionsList.Add(new Vector3(UnityEngine.Random.Range(-radius, radius), UnityEngine.Random.Range(-radius, radius), UnityEngine.Random.Range(-radius, radius)));
             if (visableObject)
             {
                 transforms.Add(Instantiate(prefab).transform);

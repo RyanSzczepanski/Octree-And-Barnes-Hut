@@ -1,10 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 
 public class DebugRenderer
 {
-    public static void DrawCube(Vector3 center, float radius, Color color, float time)
+    public static void DrawCube(float3 center, float radius, Color color, float time)
     {
         for (int i = 0; i < 8; i++)
         {
