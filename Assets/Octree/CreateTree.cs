@@ -6,36 +6,28 @@ using UnityEngine;
 
 public class CreateTree : MonoBehaviour
 {
-    public int depth;
-
     public int n;
 
     [Range(-1f, 10f)]
     public int drawDepth;
-    public NativeList<Node<NBodyOctreeData>> nodes;
-    public NativeList<Node<NBodyOctreeData>> newNodes;
-    public Node<NBodyOctreeData>[] nodesDebug;
-
-    public bool useOriginal;
-
-    public bool jobCompleted = false;
+    public NativeList<Node<NBodyNodeData>> nodes;
+    public NativeList<Node<NBodyNodeData>> newNodes;
+    public Node<NBodyNodeData>[] nodesDebug;
 
     public GameObject prefab;
-
     public Transform[] objects = new Transform[0];
 
     NativeList<Vector3> positionsList;
 
-    //BarnesHut barnesHut;
     JobHandle jobHandle;
 
     private void Start()
     {
-        nodes = new NativeList<Node<NBodyOctreeData>>(0, Allocator.Persistent);
-        newNodes = new NativeList<Node<NBodyOctreeData>>(0, Allocator.Persistent);
+        nodes = new NativeList<Node<NBodyNodeData>>(0, Allocator.Persistent);
+        newNodes = new NativeList<Node<NBodyNodeData>>(0, Allocator.Persistent);
         positionsList = new NativeList<Vector3>(0, Allocator.Persistent);
 
-        
+        GenerateTree();
     }
 
     private void PreWork()
@@ -46,8 +38,8 @@ public class CreateTree : MonoBehaviour
         if (n > 0)
             objects = ObjectSpawner(n, 63, prefab, false);
 
-        newNodes.Add(Node<NBodyOctreeData>.CreateNewNode(
-            new NBodyOctreeData(),
+        newNodes.Add(Node<NBodyNodeData>.CreateNewNode(
+            new NBodyNodeData(),
             new SpacialOctreeData()
             {
                 center = Vector3.zero,
@@ -75,37 +67,30 @@ public class CreateTree : MonoBehaviour
 
     private void Update()
     {
-        //if (jobHandle.IsCompleted && !jobCompleted)
-        //{
-        //    jobCompleted = true;
+        //GenerateTree();
 
-        //    jobHandle.Complete();
-        //    barnesHutTimer.Stop();
-        //    Debug.Log(barnesHut.nodes.Length);
-        //    //nodes.Clear();
-        //    //nodes.AddRange(barnesHut.nodes);
+        //Data Drawer
+        if (drawDepth != -1)
+        {
+            foreach (Node<NBodyNodeData> node in GetAllNodesAtDepth(0, drawDepth))
+            {
+                DebugRenderer.DrawCube(node.spacialData.center, node.spacialData.radius, new Color(1, 1 - node.GetDepth(nodes) / 7f, 0), 0f);
+            }
+        }
+        else
+        {
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                if (nodes[i].endNode)
+                {
+                    DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / 7f, 0), 0f);
+                }
+            }
+        }
+    }
 
-        //    nodesDebug = nodes.ToArray();
-        //}
-        //if (jobCompleted)
-        //{
-        //    if (n > 0)
-        //        objects = ObjectSpawner(n, 63f, prefab, false);
-
-        //    PreWork();
-        //    barnesHutTimer.Start();
-
-        //    barnesHut = new BarnesHut()
-        //    {
-        //        nodes = newNodes,
-        //        positions = positionsList
-        //    };
-        //    jobHandle = barnesHut.Schedule();
-
-        //    jobCompleted = false;
-        //}
-        
-
+    private void GenerateTree()
+    {
         PreWork();
 
         BarnesHut barnesHut = new BarnesHut()
@@ -117,45 +102,22 @@ public class CreateTree : MonoBehaviour
         jobHandle = barnesHut.Schedule();
         jobHandle.Complete();
         nodes = barnesHut.nodes;
-        //nodesDebug = nodes.ToArray();
-
-        
-
-
-
-        //List<Node<NBodyOctreeData>> nodesToDraw = new List<Node<NBodyOctreeData>>();
-        //Data Drawer
-        if (drawDepth != -1)
-        {
-            foreach (Node<NBodyOctreeData> node in GetAllNodesAtDepth(0, drawDepth))
-            {
-                DebugRenderer.DrawCube(node.spacialData.center, node.spacialData.radius, new Color(1, 1 - node.GetDepth(nodes) / (float)depth, 0), 0f);
-            }
-        }
-        else
-        {
-            for (int i = 0; i < nodes.Length; i++)
-            {
-                if (nodes[i].endNode)
-                {
-                    DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / (float)depth, 0), 0f);
-                }
-            }
-        }
+        nodesDebug = nodes.ToArray();
     }
-    private Node<NBodyOctreeData>[] GetAllNodesAtDepth(int parentIndex, int depth)
+
+    private Node<NBodyNodeData>[] GetAllNodesAtDepth(int parentIndex, int depth)
     {
         if (nodes[parentIndex].GetDepth(nodes) == depth)
         {
-            return new Node<NBodyOctreeData>[1] { nodes[parentIndex] };
+            return new Node<NBodyNodeData>[1] { nodes[parentIndex] };
         }
         else if (nodes[parentIndex].GetDepth(nodes) < depth)
         {
-            if (nodes[parentIndex].endNode) { return new Node<NBodyOctreeData>[0]; }
+            if (nodes[parentIndex].endNode) { return new Node<NBodyNodeData>[0]; }
 
             if (nodes[parentIndex].GetDepth(nodes) == depth - 1)
             {
-                Node<NBodyOctreeData>[] childNodes = new Node<NBodyOctreeData>[8];
+                Node<NBodyNodeData>[] childNodes = new Node<NBodyNodeData>[8];
                 for (int i = 0; i < 8; i++)
                 {
                     childNodes[i] = nodes[nodes[parentIndex].nodeChildren.GetChildIndex(i)];
@@ -164,7 +126,7 @@ public class CreateTree : MonoBehaviour
             }
             else
             {
-                List<Node<NBodyOctreeData>> nodeses = new List<Node<NBodyOctreeData>>();
+                List<Node<NBodyNodeData>> nodeses = new List<Node<NBodyNodeData>>();
                 for (int i = 0; i < 8; i++)
                 {
                     nodeses.AddRange(GetAllNodesAtDepth(nodes[parentIndex].nodeChildren.GetChildIndex(i), depth));
@@ -172,57 +134,10 @@ public class CreateTree : MonoBehaviour
                 return nodeses.ToArray();
             }
         }
-        return new Node<NBodyOctreeData>[0];
+        return new Node<NBodyNodeData>[0];
     }
 
-    private void BuildNodesToDepth(int depth)
-    {
-        int nodeCount = 1;
-
-        for (int currentDepth = 0; currentDepth < depth; currentDepth++)
-        {
-            for (int child = 0; child < Mathf.Pow(8, currentDepth + 1); child++)
-            {
-                nodeCount++;
-            }
-        }
-
-        //Initial Node
-        nodes.Add(Node<NBodyOctreeData>.CreateNewNode(
-            new NBodyOctreeData(),
-            new SpacialOctreeData()
-            {
-                center = Vector3.zero,
-                radius = 64,
-            },
-            -1,
-            0));
-
-        for (int i = 0; i < depth; i++)
-        {
-            int nodeLength = nodes.Length;
-            for (int j = 0; j < nodeLength; j++)
-            {
-                if (nodes[j].endNode)
-                {
-                    Node<NBodyOctreeData> currentNode = nodes[j];
-                    for (int k = 0; k < 8; k++)
-                    {
-                        Vector3 offset = SpacialOctreeData.GetOffsetVector(k);
-                        nodes.Add(currentNode.PopulateChild(
-                            k,
-                            new NBodyOctreeData(),
-                            nodes.Length));
-                    }
-                    nodes[j] = currentNode;
-                }
-            }
-        }
-    }
-
-    
-
-    public Transform[] ObjectSpawner(int num, float radius, GameObject prefab, bool visableObject)
+    private Transform[] ObjectSpawner(int num, float radius, GameObject prefab, bool visableObject)
     {
         List<Transform> transforms = new List<Transform>();
         for (int i = 0; i < num; i++)
