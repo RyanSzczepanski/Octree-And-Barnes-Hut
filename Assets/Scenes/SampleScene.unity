@@ -157,6 +157,8 @@ MonoBehaviour:
   runEveryFrame: 0
   prefab: {fileID: 971759377987228819, guid: d9ec6423a53229e43b0b46dd03372774, type: 3}
   material: {fileID: 2100000, guid: ffcb48563aa1a824d988e22f24f8355d, type: 2}
+  octree:
+    debugArray: []
 --- !u!4 &183817440
 Transform:
   m_ObjectHideFlags: 0
@@ -2132,7 +2134,7 @@ MonoBehaviour:
       m_Calls:
       - m_Target: {fileID: 183817439}
         m_TargetAssemblyTypeName: CreateTree, Assembly-CSharp
-        m_MethodName: BuildTreeStart
+        m_MethodName: CreateNewTree
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
