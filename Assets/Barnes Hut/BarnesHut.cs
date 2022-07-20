@@ -9,8 +9,9 @@ using UnityEngine;
 [BurstCompile]
 public struct BarnesHut : IJob
 {
-    public NativeList<float3> positions;
+    public NativeArray<NBodyNodeData> bodies;
     public NativeList<Node<NBodyNodeData>> nodes;
+    public NativeArray<int> occupiedNodes;
 
     public void Execute()
     {
@@ -19,28 +20,34 @@ public struct BarnesHut : IJob
 
     public void Sort()
     {
-        for (int i = 0; i < positions.Length; i++)
+        for (int i = 0; i < bodies.Length; i++)
         {
-            Recursive(positions[i], 0);
+            Recursive(i, bodies[i], 0);
         }
     }
 
 
-    private void Recursive(float3 position, int searchNodeIndex)
+    private void Recursive(int i, NBodyNodeData body, int searchNodeIndex)
     {
         Node<NBodyNodeData> currentNode = nodes[searchNodeIndex];
         //If node isnt and end node skip to children
         if (!currentNode.endNode)
         {
-            Recursive(position, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(position))/*Index Of Child Quadrent That Planet Is In*/);
+            //Needs to jump in and update node before decending
+            currentNode.data.centerOfMass = (currentNode.data.mass * currentNode.data.centerOfMass + body.mass * body.centerOfMass) / (currentNode.data.mass * body.mass);
+            currentNode.data.mass += body.mass;
+            nodes[searchNodeIndex] = currentNode;
+            Recursive(i, body, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(body.centerOfMass))/*Index Of Child Quadrent That Planet Is In*/);
             return;
         }
 
         //If node has a planet bump both down a layer
         if (currentNode.data.hasPlanet)
         {
-            float3 existingPlanetPos = currentNode.data.centerOfMass;
+            NBodyNodeData existingPlanet = currentNode.data;
+            int existingPlanetIndex = occupiedNodes.IndexOf(currentNode.index);
             currentNode.data.hasPlanet = false;
+
             //Generates all children
             for (int l = 0; l < 8; l++)
             {
@@ -48,19 +55,21 @@ public struct BarnesHut : IJob
                     l,
                     new NBodyNodeData(),
                     nodes.Length));
-
-                nodes[searchNodeIndex] = currentNode;
             }
-            nodes[searchNodeIndex] = currentNode;
+            //Needs to jump in and update node before decending
+            currentNode.data.centerOfMass = (currentNode.data.mass * currentNode.data.centerOfMass + body.mass * body.centerOfMass) / (currentNode.data.mass * body.mass);
+            currentNode.data.mass += body.mass;
             //Bumps existing planet down a node
-            Recursive(existingPlanetPos, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(existingPlanetPos)));
+            nodes[searchNodeIndex] = currentNode;
+            Recursive(existingPlanetIndex, existingPlanet, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(existingPlanet.centerOfMass)));
             //Continues the search for a node
-            Recursive(position, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(position)));
+            Recursive(i, body, currentNode.nodeChildren.GetChildIndex(currentNode.spacialData.GetChildOctantsIndex(body.centerOfMass)));
             return;
         }
         //Found node and adds planet
-        currentNode.data.hasPlanet = true;
-        currentNode.data.centerOfMass = position;
+        occupiedNodes[i] = currentNode.index;
+        currentNode.data = body;
+        currentNode.data.hasPlanet = true;        
         nodes[searchNodeIndex] = currentNode;
         return;
     }

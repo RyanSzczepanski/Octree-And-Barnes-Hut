@@ -8,5 +8,5 @@ public struct NBodyNodeData
 {
     public bool hasPlanet;
     public float3 centerOfMass;
-    public double mass;
+    public float mass;
 }
