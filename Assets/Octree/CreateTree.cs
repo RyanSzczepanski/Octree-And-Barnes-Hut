@@ -13,24 +13,39 @@ public class CreateTree : MonoBehaviour
     public int drawDepth;
     public NativeList<Node<NBodyNodeData>> nodes;
     public NativeList<Node<NBodyNodeData>> newNodes;
-    public Node<NBodyNodeData>[] nodesDebug;
+    //public Node<NBodyNodeData>[] nodesDebug;
+    [Header("")]
+    public bool runEveryFrame;
 
     public GameObject prefab;
-    public Transform[] objects = new Transform[0];
+    public Material material;
 
     NativeList<float3> positionsList;
 
+
+
+    bool isScheduled = false;
+    Timer timer;
+    BarnesHut barnesHut;
     JobHandle jobHandle;
 
     private void Start()
     {
+        DebugRenderer.CreateMesh();
         nodes = new NativeList<Node<NBodyNodeData>>(0, Allocator.Persistent);
         newNodes = new NativeList<Node<NBodyNodeData>>(0, Allocator.Persistent);
         positionsList = new NativeList<float3>(0, Allocator.Persistent);
-        //Timer timer = new Timer();
-        //timer.Start();
-        //GenerateTree();
-        //timer.Stop();
+        if (!runEveryFrame)
+        {
+            //timer = new Timer();
+            PreWork();
+            barnesHut = new BarnesHut()
+            {
+                positions = positionsList,
+                nodes = newNodes,
+            };
+        }
+
     }
 
     private void PreWork()
@@ -39,7 +54,7 @@ public class CreateTree : MonoBehaviour
         positionsList.Clear();
 
         if (n > 0)
-            objects = ObjectSpawner(n, 63, prefab, false);
+            ObjectSpawner(n, 63, prefab, false);
 
         newNodes.Add(Node<NBodyNodeData>.CreateNewNode(
             new NBodyNodeData(),
@@ -50,46 +65,86 @@ public class CreateTree : MonoBehaviour
             },
             -1,
             0));
-       
-        if(n <= 0)
-        {
-            for (int i = 0; i < objects.Length; i++)
-            {
-                positionsList.Add((float3)objects[i].position);
-            }
-        }   
-    }
-
-    private void LateUpdate()
-    {
-        for (int i = 0; i < objects.Length; i++)
-        {
-            Destroy(objects[i].gameObject);
-        }
     }
 
     private void Update()
     {
-        GenerateTree();
-
+        if (!jobHandle.IsCompleted) { return; }
+        if (runEveryFrame)
+        {
+            GenerateTree();
+        }
+        else
+        {
+            if (jobHandle.IsCompleted && isScheduled)
+            {
+                jobHandle.Complete();
+                nodes = barnesHut.nodes;
+                isScheduled = false;
+                DebugRenderer.DoDraw(true);
+                DebugRenderer.StartNewBatch();
+                DrawInBuild();
+                DebugRenderer.DoDraw(false);
+            }
+        }
         //Data Drawer
+        //if (nodes.Length <= 0) { return; }
+        //if (drawDepth != -1)
+        //{
+        //    Node<NBodyNodeData>[] nodesToDraw = GetAllNodesAtDepth(0, drawDepth);
+        //    foreach (Node<NBodyNodeData> node in nodesToDraw)
+        //    {
+        //        DebugRenderer.DebugDrawCube(node.spacialData.center, node.spacialData.radius, new Color(1, 1 - node.GetDepth(nodes) / 8f, 0), 0f);
+        //    }
+        //}
+        //else
+        //{
+        //    for (int i = 0; i < nodes.Length; i++)
+        //    {
+        //        if (nodes[i].endNode)
+        //        {
+        //            DebugRenderer.DebugDrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / 6f, 0), 0f);
+        //        }
+        //    }
+        //}
+    }
+
+    public void DrawInBuild()
+    {
+        if (nodes.Length <= 0) { return; }
         if (drawDepth != -1)
         {
-            foreach (Node<NBodyNodeData> node in GetAllNodesAtDepth(0, drawDepth))
+            Node<NBodyNodeData>[] nodesToDraw = GetAllNodesAtDepth(0, drawDepth);
+            foreach (Node<NBodyNodeData> node in nodesToDraw)
             {
-                DebugRenderer.DrawCube(node.spacialData.center, node.spacialData.radius, new Color(1, 1 - node.GetDepth(nodes) / 7f, 0), 0f);
+                DebugRenderer.DrawCube(node.spacialData.center, node.spacialData.radius, nodesToDraw.Length, material);
             }
         }
         else
         {
-            for (int i = 0; i < nodes.Length; i++)
+            for (int i = 0, j = 1; i < nodes.Length; i++)
             {
                 if (nodes[i].endNode)
                 {
-                    DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, new Color(1, 1 - nodes[i].GetDepth(nodes) / 7f, 0), 0f);
+                    DebugRenderer.DrawCube(nodes[i].spacialData.center, nodes[i].spacialData.radius, j, material);
+                    j++;
                 }
             }
         }
+    }
+
+    public void BuildTreeStart()
+    {
+        PreWork();
+
+        BarnesHut barnesHut = new BarnesHut()
+        {
+            positions = positionsList,
+            nodes = newNodes,
+        };
+        //timer.Start();
+        jobHandle = barnesHut.Schedule();
+        isScheduled = true;
     }
 
     private void GenerateTree()
@@ -105,7 +160,6 @@ public class CreateTree : MonoBehaviour
         jobHandle = barnesHut.Schedule();
         jobHandle.Complete();
         nodes = barnesHut.nodes;
-        //nodesDebug = nodes.ToArray();
     }
 
     private Node<NBodyNodeData>[] GetAllNodesAtDepth(int parentIndex, int depth)
