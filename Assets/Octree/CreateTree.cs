@@ -23,7 +23,8 @@ public class CreateTree : MonoBehaviour
     private void Start()
     {
         octree = new Octree();
-        CreateNewTree();
+        octree.Init(n);
+        //CreateNewTree();
         //octree.Init(n);
         //ObjectGenerator(n, 63);
         //octree.GenerateTree(data);
@@ -31,12 +32,29 @@ public class CreateTree : MonoBehaviour
 
     private void Update()
     {
+        if (runEveryFrame)
+        {
+            CreateNewTree();
+        }
+        //DrawInEditor(drawDepth);
+    }
+
+    private void OnDrawGizmos()
+    {
         DrawInEditor(drawDepth);
     }
 
-    public void CreateNewTree()
+    private void LateUpdate()
     {
-        octree.Init(n);
+        if (runEveryFrame)
+        {
+            //octree.Dispose();
+        }
+    }
+
+    public void CreateNewTree()
+    {            
+        //octree.Init(n);
         ObjectGenerator(n, 63);
         octree.GenerateTree(data);
     }
@@ -67,7 +85,7 @@ public class CreateTree : MonoBehaviour
 
     public void DrawInEditor(int drawDepth)
     {
-        if (octree.nodes.Length <= 0) { Debug.Log("fuck"); return; }
+        if (octree.nodes.Length <= 0) { return; }
         if (drawDepth != -1)
         {
             Node<NBodyNodeData>[] nodesToDraw = octree.GetAllNodesAtDepth(0, drawDepth);
@@ -99,6 +117,8 @@ public class CreateTree : MonoBehaviour
                 mass = UnityEngine.Random.Range(5, 50),
                 hasPlanet = true,
             };
+            //GameObject temp = Instantiate(prefab);
+            //temp.transform.position = data[i].centerOfMass;
         }
     }
 }

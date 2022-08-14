@@ -16,10 +16,10 @@ public class UIManager : MonoBehaviour
     {
         sliderText.text = $"{slider.value}";
         tree.drawDepth = (int)slider.value;
-        DebugRenderer.DoDraw(true);
-        DebugRenderer.StartNewBatch();
-        tree.DrawInBuild();
-        DebugRenderer.DoDraw(false);
+        //DebugRenderer.DoDraw(true);
+        //DebugRenderer.StartNewBatch();
+        //tree.DrawInBuild();
+        //DebugRenderer.DoDraw(false);
     }
 
     public void BodyUpdater()

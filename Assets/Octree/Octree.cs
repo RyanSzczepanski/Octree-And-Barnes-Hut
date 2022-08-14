@@ -9,18 +9,27 @@ public struct Octree
 {
     public NativeList<Node<NBodyNodeData>> nodes;
     public NativeList<Node<NBodyNodeData>> newNodes;
-    public NativeArray<int> occupiedNodes;
+    //public NativeArray<int> occupiedNodes;
 
-    public Node<NBodyNodeData>[] debugArray;
+    //public Node<NBodyNodeData>[] debugArray;
 
     public void Init(int size)
     {
         nodes = new NativeList<Node<NBodyNodeData>>(0, Allocator.Persistent);
-        occupiedNodes = new NativeArray<int>(size, Allocator.Persistent);
+        //occupiedNodes = new NativeArray<int>(size, Allocator.Persistent);
+    }
+
+    public void Dispose()
+    {
+        nodes.Dispose();
+        //occupiedNodes.Dispose();
     }
 
     private void PreWork()
     {
+        nodes.Clear();
+        //occupiedNodes.Dispose();
+
         newNodes = new NativeList<Node<NBodyNodeData>>(0, Allocator.TempJob);
 
         newNodes.Add(Node<NBodyNodeData>.CreateNewNode(
@@ -49,7 +58,7 @@ public struct Octree
 
         JobHandle jobHandle = barnesHut.Schedule();
         jobHandle.Complete();
-        this.occupiedNodes.CopyFrom(barnesHut.occupiedNodes);
+        //this.occupiedNodes.CopyFrom(barnesHut.occupiedNodes);
         this.nodes.CopyFrom(barnesHut.nodes);
 
         newNodes.Dispose();
@@ -58,12 +67,12 @@ public struct Octree
 
 
 
-        for (int i = 0; i < this.occupiedNodes.Length; i++)
-        {
+        //for (int i = 0; i < this.occupiedNodes.Length; i++)
+        //{
             //Debug.Log(this.nodesWithPlanets[i]);
-        }
+        //}
 
-        debugArray = nodes.ToArray();
+        //debugArray = nodes.ToArray();
     }
 
     public Node<NBodyNodeData>[] GetAllNodesAtDepth(int parentIndex, int depth)

@@ -42,21 +42,25 @@ public class DebugRenderer
 
     public static void DebugDrawCube(float3 center, float radius, Color color, float time)
     {
-            //Face1
-            Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(0) * radius, center + SpacialOctreeData.GetOffsetVector(1) * radius, color, time);
-            Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(0) * radius, center + SpacialOctreeData.GetOffsetVector(2) * radius, color, time);
-            Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(3) * radius, center + SpacialOctreeData.GetOffsetVector(1) * radius, color, time);
-            Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(3) * radius, center + SpacialOctreeData.GetOffsetVector(2) * radius, color, time);
-            //Face2
-            Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(4) * radius, center + SpacialOctreeData.GetOffsetVector(5) * radius, color, time);
-            Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(4) * radius, center + SpacialOctreeData.GetOffsetVector(6) * radius, color, time);
-            Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(7) * radius, center + SpacialOctreeData.GetOffsetVector(5) * radius, color, time);
-            Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(7) * radius, center + SpacialOctreeData.GetOffsetVector(6) * radius, color, time);
-            //Connecting Arms
-            Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(0) * radius, center + SpacialOctreeData.GetOffsetVector(4) * radius, color, time);
-            Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(1) * radius, center + SpacialOctreeData.GetOffsetVector(5) * radius, color, time);
-            Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(2) * radius, center + SpacialOctreeData.GetOffsetVector(6) * radius, color, time);
-            Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(3) * radius, center + SpacialOctreeData.GetOffsetVector(7) * radius, color, time);
+        //Face1
+        Color temp = Gizmos.color;
+        Gizmos.color = color;
+        Gizmos.DrawWireCube(center, new Vector3(radius * 2, radius * 2, radius * 2));
+        Gizmos.color = temp;
+        //Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(0) * radius, center + SpacialOctreeData.GetOffsetVector(1) * radius, color, time);
+        //Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(0) * radius, center + SpacialOctreeData.GetOffsetVector(2) * radius, color, time);
+        //Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(3) * radius, center + SpacialOctreeData.GetOffsetVector(1) * radius, color, time);
+        //Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(3) * radius, center + SpacialOctreeData.GetOffsetVector(2) * radius, color, time);
+        //Face2
+        //Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(4) * radius, center + SpacialOctreeData.GetOffsetVector(5) * radius, color, time);
+        //Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(4) * radius, center + SpacialOctreeData.GetOffsetVector(6) * radius, color, time);
+        //Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(7) * radius, center + SpacialOctreeData.GetOffsetVector(5) * radius, color, time);
+        //Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(7) * radius, center + SpacialOctreeData.GetOffsetVector(6) * radius, color, time);
+        //Connecting Arms
+        //Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(0) * radius, center + SpacialOctreeData.GetOffsetVector(4) * radius, color, time);
+        //Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(1) * radius, center + SpacialOctreeData.GetOffsetVector(5) * radius, color, time);
+        //Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(2) * radius, center + SpacialOctreeData.GetOffsetVector(6) * radius, color, time);
+        //Debug.DrawLine(center + SpacialOctreeData.GetOffsetVector(3) * radius, center + SpacialOctreeData.GetOffsetVector(7) * radius, color, time);
     }
 
 
