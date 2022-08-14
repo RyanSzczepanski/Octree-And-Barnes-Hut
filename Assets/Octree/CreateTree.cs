@@ -91,7 +91,7 @@ public class CreateTree : MonoBehaviour
             Node<NBodyNodeData>[] nodesToDraw = octree.GetAllNodesAtDepth(0, drawDepth);
             foreach (Node<NBodyNodeData> node in nodesToDraw)
             {
-                DebugRenderer.DebugDrawCube(node.spacialData.center, node.spacialData.radius, new Color(1, 1 - node.GetDepth(octree.nodes) / 6f, 0), 0f);
+                DebugRenderer.GizmoDrawCube(node.spacialData.center, node.spacialData.radius, new Color(1, 1 - node.GetDepth(octree.nodes) / 6f, 0));
             }
         }
         else
@@ -100,7 +100,7 @@ public class CreateTree : MonoBehaviour
             {
                 if (octree.nodes[i].endNode)
                 {
-                    DebugRenderer.DebugDrawCube(octree.nodes[i].spacialData.center, octree.nodes[i].spacialData.radius, new Color(1, 1 - octree.nodes[i].GetDepth(octree.nodes) / 6f, 0), 0f);
+                    DebugRenderer.GizmoDrawCube(octree.nodes[i].spacialData.center, octree.nodes[i].spacialData.radius, new Color(1, 1 - octree.nodes[i].GetDepth(octree.nodes) / 6f, 0));
                 }
             }
         }

@@ -28,14 +28,14 @@ public struct Node<Data>
 
             nodeChildren = new NodeChildren()
             {
-                child0 = -1,
-                child1 = -1,
-                child2 = -1,
-                child3 = -1,
-                child4 = -1,
-                child5 = -1,
-                child6 = -1,
-                child7 = -1,
+                child0 = 0,
+                child1 = 0,
+                child2 = 0,
+                child3 = 0,
+                child4 = 0,
+                child5 = 0,
+                child6 = 0,
+                child7 = 0,
             },
         };
     }
@@ -43,7 +43,7 @@ public struct Node<Data>
     public int GetDepth(NativeArray<Node<Data>> nodes)
     {
         int depth = 0;
-        if (parentNodeIndex == -1)
+        if (parentNodeIndex == 0)
             return depth;
         else
         {
