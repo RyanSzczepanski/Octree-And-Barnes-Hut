@@ -11,6 +11,7 @@ public class UIManager : MonoBehaviour
     public TMP_InputField inputField;
     public Slider slider;
     public TMP_Text sliderText;
+    public Toggle runEveryFrameToggle;
 
     public void SliderUpdate()
     {
@@ -25,5 +26,10 @@ public class UIManager : MonoBehaviour
     public void BodyUpdater()
     {
         tree.n = int.Parse(inputField.text);
+    }
+
+    public void RunEveryFrameUpdater()
+    {
+        tree.runEveryFrame = runEveryFrameToggle.isOn;
     }
 }
